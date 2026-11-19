@@ -1,0 +1,120 @@
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  mobile       String    @unique
+  email        String?   @unique
+  passwordHash String?
+  fullName     String
+  role         String    @default("CUSTOMER")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  customer     Customer?
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  floors    Floor[]
+  flats     Flat[]
+  createdAt DateTime @default(now())
+}
+
+model Floor {
+  id        String   @id @default(uuid())
+  blockId   String
+  block     Block    @relation(fields: [blockId], references: [id])
+  number    Int
+  flats     Flat[]
+  createdAt DateTime @default(now())
+}
+
+model Flat {
+  id         String     @id @default(uuid())
+  blockId    String
+  block      Block      @relation(fields: [blockId], references: [id])
+  floorId    String
+  floor      Floor      @relation(fields: [floorId], references: [id])
+  flatNumber String
+  customers  Customer[]
+
+  @@unique([blockId, flatNumber])
+}
+
+model Customer {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  flatId          String
+  flat            Flat     @relation(fields: [flatId], references: [id])
+  occupancyStatus String   @default("OWNER")
+  accountType     String   @default("MONTHLY_CREDIT")
+  creditBalance   Decimal  @default(0.00) @db.Decimal(12, 2)
+  orders          Order[]
+  invoices        Invoice[]
+}
+
+model ProductBrand {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id         String      @id @default(uuid())
+  brandId    String?
+  brand      ProductBrand? @relation(fields: [brandId], references: [id])
+  name       String
+  category   String
+  price      Decimal     @db.Decimal(10, 2)
+  unit       String
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  orderItems OrderItem[]
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  customerId   String
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  deliveryDate DateTime    @db.Date
+  orderType    String      @default("NEXT_DAY")
+  status       String      @default("PENDING")
+  totalAmount  Decimal     @db.Decimal(10, 2)
+  items        OrderItem[]
+  createdAt    DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+}
+
+model Invoice {
+  id                    String   @id @default(uuid())
+  customerId            String
+  customer              Customer @relation(fields: [customerId], references: [id])
+  billingPeriodStart    DateTime @db.Date
+  billingPeriodEnd      DateTime @db.Date
+  subscriptionCharges   Decimal  @db.Decimal(10, 2)
+  additionalOrdersCost  Decimal  @db.Decimal(10, 2)
+  cancellationDeduction Decimal  @db.Decimal(10, 2)
+  previousBalance       Decimal  @db.Decimal(10, 2)
+  paymentsReceived      Decimal  @db.Decimal(10, 2)
+  totalAmountDue        Decimal  @db.Decimal(10, 2)
+  status                String   @default("PENDING")
+  createdAt             DateTime @default(now())
+}

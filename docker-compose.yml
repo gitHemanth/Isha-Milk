@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: isha_mssql_db
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Vaisakhi@SkyPark2026!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: isha_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  api:
+    build: ./backend
+    container_name: isha_backend_api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=sqlserver://mssql:1433;database=IshaMilkDB;user=sa;password=Vaisakhi@SkyPark2026!;encrypt=true;trustServerCertificate=true;
+      - REDIS_URL=redis://redis:6379
+      - PORT=3000
+    depends_on:
+      - mssql
+      - redis
+
+volumes:
+  mssql_data:
